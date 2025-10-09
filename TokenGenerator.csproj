@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NetDocuments.CallerIdentity" Version="1.3.6" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.400.44" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.400.44" />
+  </ItemGroup>
+</Project>
