@@ -13,7 +13,7 @@ This tool generates AWS STS GetCallerIdentity signatures for authenticating serv
 Your `~/.aws/credentials` file should contain profiles with the necessary role configurations. For example:
 
 ```ini
-[rambo]
+[sec-acl-api-svc]
 role_arn=arn:aws:iam::730335459224:role/sec-acl-api-svc
 source_profile=730335459224_ND-AssumeRoleDev
 region=us-west-2
@@ -40,7 +40,7 @@ dotnet run <profile-name> <audience>
 #### Generate token for sec-acl-api-svc
 
 ```bash
-dotnet run rambo sec-acl-api-svc
+dotnet run sec-acl-api-svc sec-acl-api-svc
 ```
 
 #### Generate token for doc-metadata-api-svc
@@ -59,11 +59,7 @@ The tool will output:
 ### Example Output
 
 ```
-Generating AWS Identity Signature for profile 'rambo'...
-=== CLIENT SECRET ===
-<base64-encoded-signature>
-=====================
-
+Generating AWS Identity Signature for profile 'sec-acl-api-svc'...
 === CURL COMMAND ===
 curl -k -X POST "https://idp-auth-s2s-svc.lb.service/auth/v1/access_token" \
   -H "Content-Type: application/json" \
@@ -75,6 +71,9 @@ curl -k -X POST "https://idp-auth-s2s-svc.lb.service/auth/v1/access_token" \
     "scope": "service.read.permissions"
   }'
 ====================
+
+=== CLIENT SECRET (Token) ===
+<base64-encoded-signature>
 ```
 
 ## Building
@@ -117,7 +116,7 @@ Could not load '<profile-name>' AWS profile. Make sure the profile exists in you
 If you don't provide both required arguments, you'll see:
 ```
 Usage: TokenGenerator <profile-name> <audience>
-Example: TokenGenerator rambo sec-acl-api-svc
+Example: TokenGenerator sec-acl-api-svc sec-acl-api-svc
          TokenGenerator doc-metadata-api-svc doc-metadata-api-svc
 ```
 
