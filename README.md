@@ -60,13 +60,21 @@ dotnet run doc-metadata-api-svc doc-metadata-api-svc "service.create"
 
 ```bash
 dotnet run doc-metadata-api-svc doc-metadata-api-svc "service.create service.read service.update service.delete"
+dotnet run doc-content-api-svc doc-content-api-svc "service.create service.read service.update service.delete"
 ```
 
-#### Generate token for different services
+#### Generate token for ACL service (requires single scope only)
+
+**Note:** The `sec-acl-api-svc` requires tokens with a **single scope** value. Multi-scope tokens will result in 403 Forbidden errors.
 
 ```bash
-dotnet run doc-content-api-svc doc-content-api-svc "service.read service.write"
-dotnet run sec-acl-api-svc sec-acl-api-svc "service.read"
+# ✅ Correct - single scope per token
+dotnet run doc-metadata-api-svc sec-acl-api-svc "service.write.relationships"
+dotnet run doc-metadata-api-svc sec-acl-api-svc "service.read.relationships"
+dotnet run doc-metadata-api-svc sec-acl-api-svc "service.delete.relationships"
+
+# ❌ Incorrect - multiple scopes will fail
+dotnet run doc-metadata-api-svc sec-acl-api-svc "service.write.relationships service.read.relationships"
 ```
 
 ## Output
