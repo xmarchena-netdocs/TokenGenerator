@@ -33,7 +33,7 @@ region=us-west-2
 ## Usage
 
 ```bash
-dotnet run <profile-name> <audience> [scope]
+dotnet run <profile-name> <audience> [scope] [--token-only]
 ```
 
 ### Parameters
@@ -41,6 +41,7 @@ dotnet run <profile-name> <audience> [scope]
 - `<profile-name>`: The name of the AWS profile from your `~/.aws/credentials` file
 - `<audience>`: The target service audience for the token
 - `[scope]`: (Optional) Space-separated list of scopes. Default: `service.read`
+- `[--token-only]`: (Optional) Output only the raw bearer token without headers, metadata, or usage examples. Perfect for scripting and piping.
 
 ### Examples
 
@@ -77,13 +78,39 @@ dotnet run doc-metadata-api-svc sec-acl-api-svc "service.delete.relationships"
 dotnet run doc-metadata-api-svc sec-acl-api-svc "service.write.relationships service.read.relationships"
 ```
 
+#### Generate token for scripting (token-only output)
+
+Use the `--token-only` flag to output just the raw bearer token, perfect for capturing in scripts or piping to other commands:
+
+```bash
+# Capture token in a variable
+TOKEN=$(dotnet run doc-metadata-api-svc doc-metadata-api-svc --token-only)
+
+# Use directly in curl
+curl -H "Authorization: Bearer $TOKEN" http://doc-metadata-api-svc.lb.service/v1/documents
+
+# Token-only with custom scope (flag can be placed anywhere)
+dotnet run --token-only doc-metadata-api-svc doc-metadata-api-svc "service.create service.read"
+
+# Pipe token to clipboard (macOS)
+dotnet run doc-metadata-api-svc doc-metadata-api-svc --token-only | pbcopy
+
+# Pipe token to file
+dotnet run doc-metadata-api-svc doc-metadata-api-svc --token-only > token.txt
+```
+
 ## Output
 
-The tool will output:
+The tool has two output modes:
 
+### Standard Output (default)
 1. **BEARER TOKEN**: The JWT access token that can be used directly in API calls
 2. **Token Metadata**: Expiration time, token type, and scope information
 3. **Usage Example**: A sample curl command showing how to use the token
+
+### Token-Only Output (`--token-only` flag)
+- Outputs **only the raw bearer token** with no additional formatting
+- Perfect for scripting, piping, or capturing in variables
 
 ### Example Output
 
@@ -220,6 +247,7 @@ Usage: TokenGenerator <profile-name> <audience> [scope]
 - ✅ **Multiple scopes support**: Request multiple permissions in a single token
 - ✅ **Automatic HTTP client**: Handles the token exchange automatically
 - ✅ **TLS certificate bypass**: Works with self-signed certificates in local environments
+- ✅ **Token-only mode**: `--token-only` flag for clean output perfect for scripting and automation
 
 
 ## Comparison with Go Implementation

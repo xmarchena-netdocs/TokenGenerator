@@ -7,26 +7,37 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 // Parse command-line arguments
-if (args.Length < 2)
+// Check for --token-only flag and filter it out from arguments
+bool tokenOnly = args.Contains("--token-only");
+string[] filteredArgs = args.Where(arg => arg != "--token-only").ToArray();
+
+if (filteredArgs.Length < 2)
 {
-    Console.WriteLine("Usage: TokenGenerator <profile-name> <audience> [scope]");
+    Console.WriteLine("Usage: TokenGenerator <profile-name> <audience> [scope] [--token-only]");
     Console.WriteLine("Example: TokenGenerator doc-metadata-api-svc doc-metadata-api-svc");
     Console.WriteLine("         TokenGenerator doc-metadata-api-svc doc-metadata-api-svc \"service.read service.create\"");
+    Console.WriteLine("         TokenGenerator doc-metadata-api-svc doc-metadata-api-svc --token-only");
+    Console.WriteLine("");
+    Console.WriteLine("Options:");
+    Console.WriteLine("  --token-only    Output only the raw bearer token (no headers, metadata, or usage info)");
     Console.WriteLine("");
     Console.WriteLine("Default scope: service.read");
     return 1;
 }
 
-string profileName = args[0];
-string audience = args[1];
-string scope = args.Length >= 3 ? args[2] : "service.read";
+string profileName = filteredArgs[0];
+string audience = filteredArgs[1];
+string scope = filteredArgs.Length >= 3 ? filteredArgs[2] : "service.read";
 
 try
 {
-    Console.WriteLine($"Generating bearer token for profile '{profileName}'...");
-    Console.WriteLine($"Audience: {audience}");
-    Console.WriteLine($"Scope: {scope}");
-    Console.WriteLine();
+    if (!tokenOnly)
+    {
+        Console.WriteLine($"Generating bearer token for profile '{profileName}'...");
+        Console.WriteLine($"Audience: {audience}");
+        Console.WriteLine($"Scope: {scope}");
+        Console.WriteLine();
+    }
 
     // Load AWS credentials from the specified profile
     var chain = new CredentialProfileStoreChain();
@@ -38,7 +49,21 @@ try
 
     // Generate AWS V4 signature
     var signer = new AwsV4IdentitySigner();
-    var signature = await signer.Sign(credentials, region);
+
+    dynamic? signature = null;
+    try
+    {
+        signature = await signer.Sign(credentials, region);
+    }
+    catch (Exception ex)
+    {
+        throw new InvalidOperationException(
+            $"Failed to sign AWS GetCallerIdentity request. " +
+            $"This typically happens when assuming a role fails. " +
+            $"Profile: {profileName}, Region: {region.SystemName}. " +
+            $"Error: {ex.Message}",
+            ex);
+    }
 
     if (signature == null)
     {
@@ -81,16 +106,23 @@ try
     }
 
     // Output the bearer token
-    Console.WriteLine("=== BEARER TOKEN ===");
-    Console.WriteLine(tokenResponse.AccessToken);
-    Console.WriteLine();
-    Console.WriteLine($"Token Type: {tokenResponse.TokenType}");
-    Console.WriteLine($"Expires: {tokenResponse.AccessTokenExpiration}");
-    Console.WriteLine($"Scope: {scope}");
-    Console.WriteLine();
-    Console.WriteLine("=== USAGE ===");
-    Console.WriteLine($"curl -H \"Authorization: Bearer {tokenResponse.AccessToken.Substring(0, Math.Min(50, tokenResponse.AccessToken.Length))}...\" \\");
-    Console.WriteLine($"  http://{audience}.lb.service/api/...");
+    if (tokenOnly)
+    {
+        Console.WriteLine(tokenResponse.AccessToken);
+    }
+    else
+    {
+        Console.WriteLine("=== BEARER TOKEN ===");
+        Console.WriteLine(tokenResponse.AccessToken);
+        Console.WriteLine();
+        Console.WriteLine($"Token Type: {tokenResponse.TokenType}");
+        Console.WriteLine($"Expires: {tokenResponse.AccessTokenExpiration}");
+        Console.WriteLine($"Scope: {scope}");
+        Console.WriteLine();
+        Console.WriteLine("=== USAGE ===");
+        Console.WriteLine($"curl -H \"Authorization: Bearer {tokenResponse.AccessToken.Substring(0, Math.Min(50, tokenResponse.AccessToken.Length))}...\" \\");
+        Console.WriteLine($"  http://{audience}.lb.service/api/...");
+    }
 
     return 0;
 }
@@ -102,6 +134,24 @@ catch (HttpRequestException e)
 catch (Exception e)
 {
     Console.WriteLine($"Error: {e.Message}");
+
+    // Print inner exception details if they exist
+    if (e.InnerException != null)
+    {
+        Console.WriteLine($"Inner Exception: {e.InnerException.Message}");
+
+        // If there's an even deeper exception, show it too
+        if (e.InnerException.InnerException != null)
+        {
+            Console.WriteLine($"Root Cause: {e.InnerException.InnerException.Message}");
+        }
+    }
+
+    // Print stack trace for debugging
+    Console.WriteLine();
+    Console.WriteLine("Stack Trace:");
+    Console.WriteLine(e.StackTrace);
+
     return 1;
 }
 
